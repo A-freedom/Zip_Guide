@@ -5,9 +5,9 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
-class ZipDirectory {
+class ZipDirectory(sourceFolder: String) {
 
-    constructor(sourceFolder: String) {
+    init {
         val fileOutputStream = FileOutputStream("$sourceFolder.zip")
         val zipOutputStream = ZipOutputStream(fileOutputStream)
         val file = File(sourceFolder)
@@ -53,28 +53,35 @@ class ZipDirectory {
 
 }
 
-class Unzip {
-    constructor(zipUrl: String) {
+class Unzip(zipUrl: String) {
+    init {
         val buffer = ByteArray(1024)
         val zipInputStream = ZipInputStream(FileInputStream(File(zipUrl)))
         var zipEntry: ZipEntry? = zipInputStream.nextEntry
         while (zipEntry != null) {
-            zipEntry = if (zipEntry.isDirectory && File(File(zipUrl).parent, zipEntry.name).mkdir()) {
-                zipInputStream.nextEntry
+            if (zipEntry.isDirectory) {
+                File(File(zipUrl).parent, zipEntry.name).mkdirs()
+                zipEntry = zipInputStream.nextEntry
             } else {
-                File(File(zipUrl).parent).mkdir()
-                val fileOutputStream = FileOutputStream(File(File(zipUrl).parent, zipEntry.name))
-                var lenght = 0
-                var length: Int
-                while (true) {
-                    length = zipInputStream.read(buffer)
-                    if (length >= 0) {
-                        fileOutputStream.write(buffer, 0, length)
-                    } else {
-                        break
+                val root = File(File(zipUrl).parent, zipEntry.name).parent
+                val file = File(File(zipUrl).parent, zipEntry.name)
+                File(root).mkdirs()
+                try {
+                    val fileOutputStream = FileOutputStream(file,false)
+                    var length: Int
+                    while (true) {
+                        length = zipInputStream.read(buffer)
+                        if (length >= 0) {
+                            fileOutputStream.write(buffer, 0, length)
+                        } else {
+                            break
+                        }
                     }
+                } catch (e: Exception) {
+                    System.err.println("file ism't open : $file")
+                }finally {
+                    zipEntry = zipInputStream.nextEntry
                 }
-                zipInputStream.nextEntry
             }
         }
     }
